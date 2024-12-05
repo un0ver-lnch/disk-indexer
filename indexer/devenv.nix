@@ -3,9 +3,10 @@
 {
   # https://devenv.sh/basics/
   env.DRIVE_CONFIG = "drives.toml";
+  env.ELASTICSEARCH_URL = "http://localhost:9200";
 
   # https://devenv.sh/packages/
-  packages = [  ];
+  packages = [ pkgs.openssl ];
 
   # https://devenv.sh/languages/
   languages.rust.enable = true;
@@ -15,6 +16,7 @@
 
   # https://devenv.sh/services/
   # services.postgres.enable = true;
+  services.elasticsearch.enable = true;
 
   # https://devenv.sh/scripts/
   enterShell = ''

@@ -1,3 +1,6 @@
+use elasticsearch::http::transport::Transport;
+use elasticsearch::indices::IndicesCreateParts;
+use elasticsearch::{BulkParts, Elasticsearch};
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use serde::Deserialize;
@@ -39,8 +42,8 @@ struct AppState {
     folders: Arc<Mutex<Vec<FolderEntry>>>,
     files: Arc<Mutex<Vec<FileEntry>>>,
 }
-
-fn main() {
+#[tokio::main]
+async fn main() {
     // Read toml config file from DRIVE_CONFIG env variable
     let current_dir = match std::env::current_dir() {
         Ok(dir) => dir,
@@ -95,6 +98,27 @@ fn main() {
     });
 
     pb.finish_with_message("Indexing complete.");
+
+    let elastic_pb = ProgressBar::new_spinner();
+
+    // Now connect to the elasticsearch server and upload the indexed files.
+    let elastic_url = match std::env::var("ELASTICSEARCH_URL") {
+        Ok(val) => val,
+        Err(_) => {
+            panic!("Error: ELASTIC_URL env variable not set");
+        }
+    };
+    pb.set_message("Connecting to elasticsearch...");
+    let transport = Transport::single_node(&elastic_url).expect("Failed to create transport");
+    let client = Elasticsearch::new(transport);
+    pb.set_message("Creating index...");
+    let index_response = client
+        .indices()
+        .create(IndicesCreateParts::Index("files_index"))
+        .send()
+        .await
+        .expect("Failed to create elasticsearch index");
+    pb.set_message("Uploading files...");
 }
 
 fn index_path(
